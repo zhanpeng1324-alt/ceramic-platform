@@ -1,0 +1,41 @@
+# 依赖与构建产物
+ceramic.ui/node_modules/
+ceramic.ui/dist/
+platform.back/target/
+
+# 用户上传的运行时文件
+platform.back/uploads/
+
+# 日志
+*.log
+backend-run.*.log
+frontend-run.*.log
+
+# 压测结果产物（体积大，只提交 .jmx 脚本不提交结果）
+*.jtl
+perf-test/report-*/
+perf-test/_TG*.jmx
+perf-test/seckill-tokens.csv
+
+# 本地保留但不进仓库的过程性文档与运维脚本
+/优化清单.md
+/会话交接文档.md
+platform.back/sql-archive/clean_users.sql
+platform.back/sql-archive/fix_passwords.sql
+platform.back/sql-archive/reset_admin.sql
+platform.back/sql-archive/reset_passwords.sql
+platform.back/sql-archive/update.sql
+platform.back/sql-archive/update_db.sql
+platform.back/sql-archive/update_passwords.sql
+
+# 已迁移的重复副本（内容已并入顶层，待手动删除）
+ceramic-platform/
+
+# IDE 与系统文件
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# 数据库备份不入库（含用户数据）
+platform.back/sql-archive/*.sql

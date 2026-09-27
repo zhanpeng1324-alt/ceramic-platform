@@ -1,0 +1,56 @@
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: ceramic-redis
+    ports:
+      - "6380:6379"
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: ceramic-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-admin123}
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    restart: unless-stopped
+
+  # 后端容器化（可选）：docker compose --profile full up -d 才会启动，
+  # 平时本机 java 跑后端不受影响。MySQL 在宿主机，用 host.docker.internal 访问。
+  backend:
+    profiles: ["full"]
+    build: .
+    container_name: ceramic-backend
+    depends_on:
+      - redis
+      - rabbitmq
+    ports:
+      - "8080:8080"
+    environment:
+      DB_URL: jdbc:mysql://host.docker.internal:3306/ceramic?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&characterSetResults=utf8&connectionCollation=utf8mb4_unicode_ci
+      DB_USERNAME: root
+      DB_PASSWORD: ${DB_PASSWORD:-123456}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME: admin
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-admin123}
+    volumes:
+      - backend-uploads:/app/uploads
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+volumes:
+  redis-data:
+  rabbitmq-data:
+  backend-uploads:
+
