@@ -113,9 +113,9 @@ RBAC（admin/customer/service 三角色）+ 逐接口资源归属校验 + 管理
 # 1) 启动中间件（Redis + RabbitMQ；MySQL 请用本机安装的实例）
 cd platform.back && docker compose up -d rabbitmq redis && cd ..
 
-# 2) 初始化数据库（一条命令：自动建库 + 建全表，结构已完整到最新）
+# 2) 初始化数据库（一条命令：自动建库 + 建全表 + 灌入演示数据）
 cd platform.back/src/main/resources/db
-DB_USER=root DB_PASSWORD=你的MySQL密码 bash apply_all.sh --fresh
+DB_USER=root DB_PASSWORD=你的MySQL密码 bash apply_all.sh --fresh --demo
 cd -
 
 # 3) 后端（默认 dev profile；中间件不可用会自动降级直查 DB，应用照常启动）
@@ -126,11 +126,17 @@ cd ceramic.ui && npm install && npm run dev   # http://localhost:5173
 ```
 
 > 数据库连接参数（库名/账号/密码/host/port）可用环境变量覆盖，默认 `ceramic / root / 123456 / 127.0.0.1 / 3306`。
-> 老库增量升级请看 [db/README.md](platform.back/src/main/resources/db/README.md) 的「场景 B」。
+> 加 `--demo` 会灌入演示账号 + 商品（开箱即用）；不需要演示数据时去掉即可。老库增量升级见 [db/README.md](platform.back/src/main/resources/db/README.md)「场景 B」。
 
-**默认演示账号**（演示短信登录，验证码回显在前端提示中）：
-- 管理员：`13800000000`
-- 顾客：任意 `139xxxxxxxx` 手机号自动注册
+**演示账号**（`--demo` 已内置，初始密码均为 `admin`；演示短信登录时验证码回显在前端）：
+
+| 角色 | 手机号 | 说明 |
+|---|---|---|
+| 管理员 | `13800000000` | 可进入后台，管理商品/订单/秒杀/售后 |
+| 客服 | `13800000003` | 客服工作台 |
+| 顾客 | `13800000001` | 也可用任意其它手机号，首次登录自动注册为顾客 |
+
+> ⚠️ 演示账号仅供本地体验，密码 `admin` 为弱口令；生产环境务必删除或强制改密。
 
 **AI 客服**：需配置环境变量 `DEEPSEEK_API_KEY`（不要写进代码文件）；未配置时其余功能不受影响。
 

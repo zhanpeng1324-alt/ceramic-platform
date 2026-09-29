@@ -9,6 +9,9 @@
 #   # 全新空库：先建全量基线结构 schema.sql，再执行增量脚本
 #   ./apply_all.sh --fresh
 #
+#   # 全新空库 + 演示数据（推荐给想开箱体验的人）：建库建表后灌入 demo-data.sql
+#   ./apply_all.sh --fresh --demo
+#
 # 数据库连接从环境变量读取，未设置时使用本地开发默认值：
 #   DB_NAME     (默认 ceramic)
 #   DB_USER     (默认 root)
@@ -31,9 +34,14 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MIGRATION_DIR="${SCRIPT_DIR}/migration"
 
 FRESH=0
-if [ "${1:-}" = "--fresh" ]; then
-  FRESH=1
-fi
+DEMO=0
+for arg in "$@"; do
+  case "$arg" in
+    --fresh) FRESH=1 ;;
+    --demo)  DEMO=1 ;;
+    *) echo "未知参数：$arg（可用：--fresh、--demo）" >&2; exit 2 ;;
+  esac
+done
 
 # migration 脚本的显式执行顺序。
 # 注意：V3__audit_logs 必须在 V3_1__customization_quote 之前，
@@ -60,7 +68,8 @@ MIGRATIONS=(
 run_sql() {
   local file="$1"
   echo ">>> applying: ${file}"
-  MYSQL_PWD="${DB_PASSWORD}" mysql -u"${DB_USER}" -h"${DB_HOST}" -P"${DB_PORT}" "${DB_NAME}" < "${file}"
+  MYSQL_PWD="${DB_PASSWORD}" mysql --default-character-set=utf8mb4 \
+    -u"${DB_USER}" -h"${DB_HOST}" -P"${DB_PORT}" "${DB_NAME}" < "${file}"
 }
 
 echo "==== target: ${DB_USER}@${DB_HOST}:${DB_PORT}/${DB_NAME} ===="
@@ -71,13 +80,19 @@ if [ "${FRESH}" -eq 1 ]; then
     -e "CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\` DEFAULT CHARSET utf8mb4 COLLATE utf8mb4_unicode_ci;"
   echo "==== --fresh: 应用全量基线结构 schema.sql ===="
   run_sql "${SCRIPT_DIR}/schema.sql"
-  echo "==== schema.sql 已建立完整结构；全新库无需再叠加 V*.sql，直接结束 ===="
-  exit 0
+  echo "==== schema.sql 已建立完整结构（新库无需再叠加 V*.sql）===="
+else
+  echo "==== 老库增量升级：按顺序执行 migration/V*.sql ===="
+  for m in "${MIGRATIONS[@]}"; do
+    run_sql "${MIGRATION_DIR}/${m}"
+  done
+  echo "==== 增量脚本全部完成 ===="
 fi
 
-echo "==== 老库增量升级：按顺序执行 migration/V*.sql ===="
-for m in "${MIGRATIONS[@]}"; do
-  run_sql "${MIGRATION_DIR}/${m}"
-done
+if [ "${DEMO}" -eq 1 ]; then
+  echo "==== --demo: 灌入演示种子数据 demo-data.sql（账号密码均为 admin）===="
+  run_sql "${SCRIPT_DIR}/demo-data.sql"
+  echo "==== 演示数据就绪：管理员 13800000000 / 顾客 13800000001 / 客服 13800000003 ===="
+fi
 
-echo "==== 全部完成 ===="
+echo "==== 完成 ===="

@@ -46,3 +46,11 @@ Thumbs.db
 
 # 数据库备份不入库（含用户数据）
 platform.back/sql-archive/*.sql
+
+# 项目内 Maven 本地仓库（依赖二进制，不入库；构建时自动下载）
+platform.back/.m2repo/
+
+# 本地调试/验证脚本（PowerShell），不入库
+platform.back/*.ps1
+# 后端根目录的临时压测脚本（正式压测脚本在 perf-test/）
+platform.back/stress-test.jmx

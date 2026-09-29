@@ -9,6 +9,8 @@
   由现网 MySQL `mysqldump --no-data` 导出后，将所有 `CREATE TABLE` 改写为
   `CREATE TABLE IF NOT EXISTS`，可安全重复执行。它已包含 V2..V16 的全部结构变更。
 - `migration/V*.sql` —— **增量历史脚本**，面向【已经存在的老库】，按编号顺序逐次演进。
+- `demo-data.sql` —— **演示种子数据**（可安全公开）：3 个角色账号 + 分类 + 商品，
+  幂等可重复执行。仅供本地/演示，账号初始密码均为 `admin`，生产必须删除或改密。
 - `apply_all.sh` —— 一键按正确顺序应用脚本（见下）。
 
 ## 如何建库 / 升级
@@ -22,9 +24,13 @@
 # 方式一：脚本（会自动建库 + 应用完整结构，一条命令搞定）
 DB_NAME=ceramic DB_USER=root DB_PASSWORD=123456 ./apply_all.sh --fresh
 
-# 方式二：手工（需先自行建库）
+# 想连演示账号 + 商品一起灌（开箱即用）：再加 --demo
+DB_NAME=ceramic DB_USER=root DB_PASSWORD=123456 ./apply_all.sh --fresh --demo
+
+# 方式二：手工（需先自行建库；中文字段务必带 --default-character-set=utf8mb4）
 MYSQL_PWD=123456 mysql -uroot -e "CREATE DATABASE IF NOT EXISTS ceramic DEFAULT CHARSET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-MYSQL_PWD=123456 mysql -uroot ceramic < schema.sql
+MYSQL_PWD=123456 mysql --default-character-set=utf8mb4 -uroot ceramic < schema.sql
+MYSQL_PWD=123456 mysql --default-character-set=utf8mb4 -uroot ceramic < demo-data.sql   # 可选：演示数据
 ```
 
 > 说明：`schema.sql` 只建结构、不含数据，也不建库本身。`apply_all.sh --fresh`
