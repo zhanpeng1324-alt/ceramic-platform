@@ -7,7 +7,7 @@
 
 - `schema.sql` —— **全量合并基线结构**，面向【全新的空数据库】，一次建全所有表。
   由现网 MySQL `mysqldump --no-data` 导出后，将所有 `CREATE TABLE` 改写为
-  `CREATE TABLE IF NOT EXISTS`，可安全重复执行。它已包含 V2..V13 的全部结构变更。
+  `CREATE TABLE IF NOT EXISTS`，可安全重复执行。它已包含 V2..V16 的全部结构变更。
 - `migration/V*.sql` —— **增量历史脚本**，面向【已经存在的老库】，按编号顺序逐次演进。
 - `apply_all.sh` —— 一键按正确顺序应用脚本（见下）。
 
@@ -19,15 +19,17 @@
 （结构已全部包含在 schema.sql 内）。
 
 ```bash
-# 方式一：脚本
+# 方式一：脚本（会自动建库 + 应用完整结构，一条命令搞定）
 DB_NAME=ceramic DB_USER=root DB_PASSWORD=123456 ./apply_all.sh --fresh
 
-# 方式二：手工
+# 方式二：手工（需先自行建库）
+MYSQL_PWD=123456 mysql -uroot -e "CREATE DATABASE IF NOT EXISTS ceramic DEFAULT CHARSET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 MYSQL_PWD=123456 mysql -uroot ceramic < schema.sql
 ```
 
-> 注意：schema.sql 只建结构、不含数据，也不建库本身。请先
-> `CREATE DATABASE IF NOT EXISTS ceramic DEFAULT CHARSET utf8mb4;` 并选择该库。
+> 说明：`schema.sql` 只建结构、不含数据，也不建库本身。`apply_all.sh --fresh`
+> 会先执行 `CREATE DATABASE IF NOT EXISTS` 再灌 schema，因此无需手工建库；
+> 若走方式二直接跑 schema.sql，请先自行建库并选择该库。
 
 ### 场景 B：已存在的老库（增量升级）
 
@@ -52,6 +54,9 @@ DB_NAME=ceramic DB_USER=root DB_PASSWORD=123456 ./apply_all.sh
 11. `V11__payment_gateway.sql`
 12. `V12__customization_balance.sql`
 13. `V13__notifications.sql`
+14. `V14__shop_settings.sql`
+15. `V15__product_images.sql`
+16. `V16__customization_shipping_address.sql`
 
 > 排序提示：按文件名字典序/`sort -V`，`V3_1__` 会**错误地**排在 `V3__` 之前，
 > 因此不要依赖 `ls` 排序自动执行；`apply_all.sh` 里已用显式数组固定为上述正确顺序。

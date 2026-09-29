@@ -2,7 +2,7 @@
 -- schema.sql —— ceramic 数据库完整合并基线结构（全量 DDL）
 -- ---------------------------------------------------------------------
 -- 用途：为一个【全新的空数据库】一次性建表并搭建完整结构。
---       本文件是当前生产/开发库结构的整体快照（合并了 V2..V13 的全部
+--       本文件是当前生产/开发库结构的整体快照（合并了 V2..V16 的全部
 --       增量变更），执行本文件即可得到与现网一致的最新表结构。
 --
 -- 生成方式：由现网 MySQL 通过
@@ -460,6 +460,41 @@ CREATE TABLE IF NOT EXISTS `users` (
   UNIQUE KEY `email` (`email`)
 ) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+-- =====================================================================
+-- 合并增量 V14~V16（已并入本基线，新库无需再单独执行这几个 migration）
+-- 全部幂等：CREATE TABLE IF NOT EXISTS / 基于 INFORMATION_SCHEMA 的加列判断。
+-- =====================================================================
+
+-- V14：店铺设置（单商户单行）
+CREATE TABLE IF NOT EXISTS `shop_settings` (
+    `id` BIGINT PRIMARY KEY AUTO_INCREMENT,
+    `shop_name` VARCHAR(100) NULL COMMENT '店铺名称',
+    `contact_name` VARCHAR(50) NULL COMMENT '联系人/寄件人',
+    `contact_phone` VARCHAR(30) NULL COMMENT '联系电话',
+    `address` VARCHAR(255) NULL COMMENT '店铺地址(发货地/默认退货地址)',
+    `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='店铺设置(单商户单行)';
+
+INSERT INTO `shop_settings` (`shop_name`, `contact_name`, `contact_phone`, `address`)
+SELECT '青瓷坊', '', '', '' WHERE NOT EXISTS (SELECT 1 FROM `shop_settings`);
+
+-- V15：商品图册（products.images，首图为封面）
+SET @col_exists := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'products' AND COLUMN_NAME = 'images');
+SET @ddl := IF(@col_exists = 0,
+    'ALTER TABLE `products` ADD COLUMN `images` TEXT NULL COMMENT ''商品图册(JSON数组，首图为封面)'' AFTER `image_url`',
+    'SELECT 1');
+PREPARE stmt FROM @ddl; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- V16：定制订单收货地址（custom_orders.shipping_address）
+SET @col_exists := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'custom_orders' AND COLUMN_NAME = 'shipping_address');
+SET @ddl := IF(@col_exists = 0,
+    'ALTER TABLE `custom_orders` ADD COLUMN `shipping_address` VARCHAR(500) NULL COMMENT ''收货地址'' AFTER `contact_phone`',
+    'SELECT 1');
+PREPARE stmt FROM @ddl; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;

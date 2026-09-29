@@ -66,7 +66,10 @@ run_sql() {
 echo "==== target: ${DB_USER}@${DB_HOST}:${DB_PORT}/${DB_NAME} ===="
 
 if [ "${FRESH}" -eq 1 ]; then
-  echo "==== --fresh: 先应用全量基线结构 schema.sql ===="
+  echo "==== --fresh: 先确保数据库存在 ===="
+  MYSQL_PWD="${DB_PASSWORD}" mysql -u"${DB_USER}" -h"${DB_HOST}" -P"${DB_PORT}" \
+    -e "CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\` DEFAULT CHARSET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+  echo "==== --fresh: 应用全量基线结构 schema.sql ===="
   run_sql "${SCRIPT_DIR}/schema.sql"
   echo "==== schema.sql 已建立完整结构；全新库无需再叠加 V*.sql，直接结束 ===="
   exit 0

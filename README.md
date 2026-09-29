@@ -93,19 +93,23 @@ RBAC（admin/customer/service 三角色）+ 逐接口资源归属校验 + 管理
 前置：JDK 17+、Node 18+、Docker、Maven（wrapper 自带）
 
 ```bash
-# 1) 启动中间件（MySQL 可用本机或容器）
-cd platform.back && docker compose up -d rabbitmq redis
+# 1) 启动中间件（Redis + RabbitMQ；MySQL 请用本机安装的实例）
+cd platform.back && docker compose up -d rabbitmq redis && cd ..
 
-# 2) 初始化数据库（schema + 全量迁移脚本，按文件名顺序执行）
-mysql -uroot -p ceramic < platform.back/src/main/resources/db/schema.sql
-bash platform.back/src/main/resources/db/apply_all.sh   # 或按 migration/ 目录手动执行
+# 2) 初始化数据库（一条命令：自动建库 + 建全表，结构已完整到最新）
+cd platform.back/src/main/resources/db
+DB_USER=root DB_PASSWORD=你的MySQL密码 bash apply_all.sh --fresh
+cd -
 
 # 3) 后端（默认 dev profile；中间件不可用会自动降级直查 DB，应用照常启动）
-./mvnw spring-boot:run
+cd platform.back && ./mvnw spring-boot:run
 
 # 4) 前端
 cd ceramic.ui && npm install && npm run dev   # http://localhost:5173
 ```
+
+> 数据库连接参数（库名/账号/密码/host/port）可用环境变量覆盖，默认 `ceramic / root / 123456 / 127.0.0.1 / 3306`。
+> 老库增量升级请看 [db/README.md](platform.back/src/main/resources/db/README.md) 的「场景 B」。
 
 **默认演示账号**（演示短信登录，验证码回显在前端提示中）：
 - 管理员：`13800000000`
