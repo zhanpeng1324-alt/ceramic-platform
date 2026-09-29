@@ -37,5 +37,12 @@ ceramic-platform/
 .DS_Store
 Thumbs.db
 
+# 工具生成的状态文件（非项目代码）
+.mimosa/
+**/.mimosa/
+
+# 本地过程性分析文档，不入仓库
+/项目解析文档.html
+
 # 数据库备份不入库（含用户数据）
 platform.back/sql-archive/*.sql

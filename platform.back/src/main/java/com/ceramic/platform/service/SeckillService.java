@@ -107,11 +107,15 @@ public class SeckillService {
     public String buy(Long userId, Long activityId) {
         SeckillActivity a = requireBuyable(activityId);
 
-        // ① 单用户限流：1 秒 1 次
-        String rateKey = "seckill:rate:" + userId;
-        Boolean first = redis.opsForValue().setIfAbsent(rateKey, "1", Duration.ofSeconds(1));
-        if (!Boolean.TRUE.equals(first)) {
-            throw new IllegalArgumentException("操作太频繁，稍后再试");
+        // ① 单用户限流：1 秒 1 次；Redis 不可用时跳过限流（降级到 DB 唯一索引防重）
+        try {
+            String rateKey = "seckill:rate:" + userId;
+            Boolean first = redis.opsForValue().setIfAbsent(rateKey, "1", Duration.ofSeconds(1));
+            if (!Boolean.TRUE.equals(first)) {
+                throw new IllegalArgumentException("操作太频繁，稍后再试");
+            }
+        } catch (Exception ex) {
+            log.warn("Redis 限流不可用，跳过限流检查：activity={} user={}", activityId, userId, ex);
         }
 
         // ② Lua 原子：防重 + 判库存 + 扣减
@@ -172,12 +176,16 @@ public class SeckillService {
         a.setEndTime(e.format(FMT));
         a.setStatus(LocalDateTime.now().isBefore(s) ? "PENDING" : "ACTIVE");
         activityMapper.insert(a);
-        // 库存预热进 Redis，TTL 覆盖活动全程 + 缓冲
+        // 库存预热进 Redis，TTL 覆盖活动全程 + 缓冲；Redis 不可用时仅记日志，降级路径（DB CAS）仍可用
         long ttlSec = Duration.between(LocalDateTime.now(),
                 e.plus(Duration.ofHours(24))).getSeconds();
-        redis.opsForValue().set(stockKey(a.getId()), String.valueOf(totalStock),
-                Duration.ofSeconds(Math.max(ttlSec, 3600)));
-        redis.delete(boughtKey(a.getId()));
+        try {
+            redis.opsForValue().set(stockKey(a.getId()), String.valueOf(totalStock),
+                    Duration.ofSeconds(Math.max(ttlSec, 3600)));
+            redis.delete(boughtKey(a.getId()));
+        } catch (Exception ex) {
+            log.warn("Redis 库存预热失败，秒杀活动降级 DB 路径：activity={}", a.getId(), ex);
+        }
         log.info("秒杀活动已创建并预热库存：id={} productId={} stock={}", a.getId(), productId, totalStock);
         return detail(a.getId());
     }
@@ -195,8 +203,12 @@ public class SeckillService {
         }
         activityMapper.updateStatusGuarded(id, "CANCELLED", a.getStatus());
         // 清 Redis 库存与购买资格：Lua 扣减链路立即不可达，停止售卖
-        redis.delete(stockKey(id));
-        redis.delete(boughtKey(id));
+        try {
+            redis.delete(stockKey(id));
+            redis.delete(boughtKey(id));
+        } catch (Exception ex) {
+            log.warn("Redis 库存清理失败（活动已下线，DB 侧状态已更新）：activity={}", id, ex);
+        }
         log.info("秒杀活动已下线（原状态：{}）：activity={}", display, id);
     }
 
