@@ -17,17 +17,13 @@
 
 ## 📸 项目预览
 
-> 截图待补充。把图片放进 `docs/screenshots/` 目录，然后取消下面对应行的注释即可。
+| 首页（分类导航 + 个性化推荐） | 商品列表（筛选 / 排序 / 搜索） |
+|---|---|
+| ![首页](docs/screenshots/home.png) | ![商品列表](docs/screenshots/product.png) |
 
-<!--
-| 首页 | 商品详情 | 秒杀活动 |
-|---|---|---|
-| ![首页](docs/screenshots/home.png) | ![商品详情](docs/screenshots/product.png) | ![秒杀](docs/screenshots/seckill.png) |
-
-| 购物车/下单 | 订单与售后 | 后台管理 |
-|---|---|---|
-| ![下单](docs/screenshots/order.png) | ![售后](docs/screenshots/aftersale.png) | ![后台](docs/screenshots/admin.png) |
--->
+| 秒杀专区（限量抢购 + 实时进度） | 陶瓷定制中心（器型/材质/釉色 + 预估价） |
+|---|---|
+| ![秒杀](docs/screenshots/seckill.png) | ![定制](docs/screenshots/customize.png) |
 
 ---
 
